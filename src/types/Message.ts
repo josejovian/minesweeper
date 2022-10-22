@@ -1,0 +1,1 @@
+export type MessageType = "initial" | "lose" | "win" | "error" | "exceed";

@@ -1,0 +1,1 @@
+export type FaceType = "idle" | "suspense" | "lose" | "win";
