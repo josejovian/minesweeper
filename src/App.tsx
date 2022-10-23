@@ -10,12 +10,15 @@ import {
 	BOARD_DEFAULT_GOL,
 	BOARD_DEFAULT_HEIGHT,
 	BOARD_DEFAULT_WIDTH,
-	BOARD_MAXIMUM_SIZE,
-	BOARD_MINIMUM_SIZE,
+	BOARD_MAXIMUM_HEIGHT,
+	BOARD_MAXIMUM_WIDTH,
+	BOARD_MINIMUM_HEIGHT,
+	BOARD_MINIMUM_WIDTH,
 	BOMB,
 	DIRECTIONS,
 	FACE,
 	FLAG,
+	TILE_NUMBER_COLOR,
 	TOP_MESSAGE,
 } from "./const";
 import clsx from "clsx";
@@ -38,6 +41,7 @@ function App() {
 	const [bombCoordinates, setBombCoordinates] = useState<[number, number][]>(
 		[]
 	);
+	const [sizeString, setSizeString] = useState(`${size[1]}x${size[0]}`);
 	const [face, setFace] = useState<FaceType>("idle");
 	const [message, setMessage] = useState<MessageType>("initial");
 	const [freeze, setFreeze] = useState(false);
@@ -59,8 +63,11 @@ function App() {
 	}, [win]);
 
 	const safeLocation = useCallback(
-		(y: number, x: number) => {
-			return y >= 0 && size[0] > y && x >= 0 && size[1] > x;
+		([y, x]: [number, number], customSize: [number, number] = [-1, -1]) => {
+			const height = customSize[0] === -1 ? size[0] : customSize[0];
+			const width = customSize[1] === -1 ? size[1] : customSize[1];
+
+			return y >= 0 && height > y && x >= 0 && width > x;
 		},
 		[size]
 	);
@@ -92,7 +99,7 @@ function App() {
 			DIRECTIONS.forEach((d) => {
 				const [dy, dx] = d;
 				if (
-					safeLocation(y + dy, x + dx) &&
+					safeLocation([y + dy, x + dx]) &&
 					tiles[y + dy][x + dx].type === BOMB
 				) {
 					value++;
@@ -109,10 +116,10 @@ function App() {
 			let counter = BOARD_DEFAULT_GOL;
 
 			while (counter > 0) {
-				const y = Math.floor(Math.random() * size[0]);
-				const x = Math.floor(Math.random() * size[1]);
+				const y = Math.floor(Math.random() * tiles.length);
+				const x = Math.floor(Math.random() * tiles[0].length);
 
-				if (safeLocation(y, x) && !tiles[y][x].currentAlive) {
+				if (safeLocation([y, x]) && !tiles[y][x].currentAlive) {
 					tiles[y][x].currentAlive = true;
 					counter--;
 				}
@@ -127,8 +134,17 @@ function App() {
 
 						DIRECTIONS.forEach((d) => {
 							const [dy, dx] = d;
-							if (safeLocation(y + dy, x + dx)) {
-								if (tiles[y + dy][x + dx].currentAlive) alive++;
+							if (
+								safeLocation(
+									[y + dy, x + dx],
+									[tiles.length, row.length]
+								)
+							) {
+								if (
+									tiles[y + dy][x + dx] &&
+									tiles[y + dy][x + dx].currentAlive
+								)
+									alive++;
 								else dead++;
 							}
 						});
@@ -161,7 +177,7 @@ function App() {
 						setSpawnInAlive(true);
 					}
 					const objective = Math.floor(
-						(BOARD_DEFAULT_HEIGHT * BOARD_DEFAULT_WIDTH) / 5
+						(tiles.length * tiles[0].length) / 5
 					);
 					setBombCount(objective);
 					setFlags(objective);
@@ -170,7 +186,7 @@ function App() {
 
 			return tiles;
 		},
-		[size, safeLocation]
+		[safeLocation]
 	);
 
 	const parseSizeValuesFromSting = useCallback(
@@ -179,8 +195,8 @@ function App() {
 			if (values.length === 2) {
 				const [h, w] = values;
 
-				const numH = parseInt(h);
-				const numW = parseInt(w);
+				const numH = Number(h);
+				const numW = Number(w);
 
 				if (!isNaN(numH) && !isNaN(numW)) {
 					return [numH, numW];
@@ -192,18 +208,14 @@ function App() {
 	);
 
 	const updateBoardSize = useCallback(() => {
-		let sizeInput = document.getElementById("size-input");
-		if (!sizeInput) return;
-
-		const sizeString = (sizeInput as HTMLInputElement).value;
 		const parse = parseSizeValuesFromSting(sizeString);
 
-		if (!parse) return;
+		if (!parse) return false;
 
 		setSize(parse);
 
 		return parse;
-	}, [parseSizeValuesFromSting]);
+	}, [sizeString, parseSizeValuesFromSting]);
 
 	const initializeGame = useCallback(() => {
 		setFreeze(true);
@@ -229,10 +241,10 @@ function App() {
 		const [height, width] = currentSize;
 
 		if (
-			height < BOARD_MINIMUM_SIZE ||
-			height > BOARD_MAXIMUM_SIZE ||
-			width < BOARD_MINIMUM_SIZE ||
-			width > BOARD_MAXIMUM_SIZE
+			height < BOARD_MINIMUM_HEIGHT ||
+			height > BOARD_MAXIMUM_HEIGHT ||
+			width < BOARD_MINIMUM_WIDTH ||
+			width > BOARD_MAXIMUM_WIDTH
 		) {
 			setMessage("exceed");
 			return;
@@ -244,6 +256,7 @@ function App() {
 				row.push({
 					type: null,
 					visited: false,
+					currentAlive: false,
 					sus: false,
 				});
 			}
@@ -284,7 +297,7 @@ function App() {
 					) {
 						if (
 							spawnInAlive === tiles[y][x].currentAlive &&
-							coinFlip > 0.5
+							coinFlip > 0.6
 						) {
 							tiles[y][x].type = BOMB;
 							bombs.push([y, x]);
@@ -294,19 +307,19 @@ function App() {
 				})
 			);
 
-			let patience = 3;
+			let patience = 10;
 			while (counter > 0 && patience > 0) {
 				const y = Math.floor(Math.random() * size[0]);
 				const x = Math.floor(Math.random() * size[1]);
 
 				if (
 					!tiles[y][x].type &&
-					safeLocation(y, x) &&
-					y !== _y &&
-					x !== _x
+					safeLocation([y, x]) &&
+					(Math.abs(y - _y) > 1 || Math.abs(x - _x) > 1)
 				) {
 					tiles[y][x].type = BOMB;
 					counter--;
+					patience++;
 				} else {
 					patience--;
 				}
@@ -329,7 +342,7 @@ function App() {
 						newX = x + dx;
 
 					if (
-						safeLocation(newY, newX) &&
+						safeLocation([newY, newX]) &&
 						tiles[newY][newX].type !== BOMB
 					) {
 						const value = calculateValue(newY, newX, tiles);
@@ -356,7 +369,7 @@ function App() {
 
 	const unvisitedLocation = useCallback(
 		([y, x]: [number, number], tiles: Tile[][]) => {
-			return safeLocation(y, x) && !tiles[y][x].visited;
+			return safeLocation([y, x]) && !tiles[y][x].visited;
 		},
 		[safeLocation]
 	);
@@ -444,6 +457,36 @@ function App() {
 		]
 	);
 
+	const getTileContents = useCallback(
+		(tile: Tile) => {
+			if (tile.sus) return FLAG;
+
+			if ((tile.visited || lose) && tile.type) {
+				if (typeof tile.type === "number") {
+					const colorIndex = Math.min(
+						tile.type - 1,
+						TILE_NUMBER_COLOR.length - 1
+					);
+					return (
+						<span
+							className={clsx(
+								TILE_NUMBER_COLOR[colorIndex],
+								"font-bold"
+							)}
+						>
+							{tile.type}
+						</span>
+					);
+				}
+
+				return BOMB;
+			}
+
+			return <></>;
+		},
+		[lose]
+	);
+
 	const renderBoard = useMemo(
 		() => (
 			<table className="">
@@ -472,9 +515,7 @@ function App() {
 											"bg-red-100"
 									)}
 								>
-									{col.sus
-										? FLAG
-										: (col.visited || lose) && col.type}
+									{getTileContents(col)}
 								</td>
 							))}
 						</tr>
@@ -482,17 +523,20 @@ function App() {
 				</tbody>
 			</table>
 		),
-		[board, lose, flagTile, visitTile]
+		[board, lose, flagTile, visitTile, getTileContents]
 	);
 
 	const renderMenu = useMemo(
 		() => (
 			<Fragment>
 				<div className="flex items-center gap-4 h-12">
-					<b>Board Size</b>
+					<b>Board Size (h &times; w)</b>
 					<input
 						id="size-input"
 						defaultValue={`${size[1]}x${size[0]}`}
+						onBlur={(e) => {
+							setSizeString(e.target.value);
+						}}
 					/>
 					<Button onClick={() => initializeGame()} disabled={freeze}>
 						New Game
@@ -511,7 +555,6 @@ function App() {
 
 	return (
 		<div className="flex flex-col justify-center items-center gap-8 h-screen">
-			<h1 className="text-6xl">Minesweeper</h1>
 			<p className="text-8xl">
 				{FACE[face]} {flags}
 			</p>

@@ -3,8 +3,10 @@ export const BOARD_DEFAULT_WIDTH = VALUE;
 export const BOARD_DEFAULT_HEIGHT = VALUE;
 export const BOARD_DEFAULT_BOMBS = (1/4) * (VALUE / 2) * (VALUE / 2);
 export const BOARD_DEFAULT_GOL = VALUE*VALUE/2;
-export const BOARD_MINIMUM_SIZE = 4;
-export const BOARD_MAXIMUM_SIZE = 24;
+export const BOARD_MINIMUM_WIDTH = 10;
+export const BOARD_MAXIMUM_WIDTH = 32;
+export const BOARD_MINIMUM_HEIGHT = 10;
+export const BOARD_MAXIMUM_HEIGHT = 18;
 
 export const BOMB = "💣";
 export const FLAG = "🚩";
@@ -40,5 +42,7 @@ export const TOP_MESSAGE = {
 	"lose": "You lose!",
 	"win": "You win!",
 	"error": "Invalid board size!",
-	"exceed": `Board length must be between ${BOARD_MINIMUM_SIZE} and ${BOARD_MAXIMUM_SIZE}.`
+	"exceed": `Board height must be within ${BOARD_MINIMUM_HEIGHT}-${BOARD_MAXIMUM_HEIGHT}; width must be within ${BOARD_MINIMUM_WIDTH}-${BOARD_MAXIMUM_WIDTH}.`
 }
+
+export const TILE_NUMBER_COLOR = ["text-blue-500", "text-green-500", "text-red-500", "text-blue-800", "text-green-800", "text-red-800"]
